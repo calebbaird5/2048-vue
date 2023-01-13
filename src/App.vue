@@ -210,13 +210,6 @@ function availablePositions(): Position[] {
   </section>
 </template>
 
-<!-- Global Styles -->
-<style lang="scss">
-body {
-  background: #faf8ef;
-}
-</style>
-
 <style lang="scss" scoped>
 $gap: 13px;
 $boardDim: min(80vw, 80vh);
