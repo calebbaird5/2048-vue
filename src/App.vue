@@ -1,11 +1,13 @@
 <script setup="setup" lang="ts">
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted } from "vue";
+import type { Ref } from "vue";
+import { useKeyUp } from "@/compostables/use-keyup";
 
 enum Direction {
   Left = 37,
   Up,
   Right,
-  Down
+  Down,
 }
 
 interface Position {
@@ -46,51 +48,48 @@ function generateRandomSlide(): void {
     gameover.value = true;
   } else {
     slides.value.push({
-      value: Math.random() < .9 ? 2 : 4,
+      value: Math.random() < 0.9 ? 2 : 4,
       id: currentSlide.value,
-      position: positions[Math.floor(Math.random()*positions.length)]
-    })
+      position: positions[Math.floor(Math.random() * positions.length)],
+    });
     currentSlide.value += 1;
   }
 }
 
-const values = ref([1,2,3,4]);
+const values = ref([1, 2, 3, 4]);
 const mergedLastMove = ref(false);
 
-import { useKeyUp } from '@/compostables/use-keyup';
-
 useKeyUp([
-  { key: 'ArrowUp', 'fn': () => handleKeyPress(Direction.Up) },
-  { key: 'ArrowDown', 'fn': () => handleKeyPress(Direction.Down) },
-  { key: 'ArrowLeft', 'fn': () => handleKeyPress(Direction.Left) },
-  { key: 'ArrowRight', 'fn': () => handleKeyPress(Direction.Right) },
+  { key: "ArrowUp", fn: () => handleKeyPress(Direction.Up) },
+  { key: "ArrowDown", fn: () => handleKeyPress(Direction.Down) },
+  { key: "ArrowLeft", fn: () => handleKeyPress(Direction.Left) },
+  { key: "ArrowRight", fn: () => handleKeyPress(Direction.Right) },
 ]);
 
-function handleKeyPress(direction): void {
-  console.log('in handlePress', direction)
-  let slideProps: {horizontal: boolean, increase: boolean} | null = null;
-  switch(direction) {
+function handleKeyPress(direction: Direction): void {
+  let slideProps: { horizontal: boolean; increase: boolean } | null = null;
+  switch (direction) {
     case Direction.Left:
-      slideProps = {horizontal: true, increase: false};
+      slideProps = { horizontal: true, increase: false };
       break;
     case Direction.Right:
-      slideProps = {horizontal: true, increase: true};
+      slideProps = { horizontal: true, increase: true };
       break;
     case Direction.Up:
-      slideProps = {horizontal: false, increase: false};
+      slideProps = { horizontal: false, increase: false };
       break;
     case Direction.Down:
-      slideProps = {horizontal: false, increase: true};
+      slideProps = { horizontal: false, increase: true };
       break;
   }
   if (!mergedLastMove.value)
-    slides.value = slides.value.filter(slide => !slide.merged)
+    slides.value = slides.value.filter((slide) => !slide.merged);
 
   if (slideProps) {
-    let {moved, merged} = slide(slideProps);
-    let mergedSlides = slides.value.filter(slide => slide.merged);
+    let { moved, merged } = slide(slideProps);
+    let mergedSlides = slides.value.filter((slide) => slide.merged);
     for (let slide of mergedSlides) {
-      let destSlide = slides.value.find(el => el.id === slide.merged);
+      let destSlide = slides.value.find((el) => el.id === slide.merged);
       if (destSlide) slide.position = destSlide.position;
     }
 
@@ -100,31 +99,34 @@ function handleKeyPress(direction): void {
 
     mergedLastMove.value = merged;
   }
-};
+}
 
-
-function slide(props: { horizontal: boolean, increase: boolean })
-: {moved: boolean, merged: boolean} {
-  let _slides = slides.value.filter(slide => !slide.merged);
+function slide(props: { horizontal: boolean; increase: boolean }): {
+  moved: boolean;
+  merged: boolean;
+} {
+  let _slides = slides.value.filter((slide) => !slide.merged);
   let moved = false;
   let merged = false;
-  let sliderDim : 'x' | 'y' = props.horizontal ? 'x' : 'y';
+  let sliderDim: "x" | "y" = props.horizontal ? "x" : "y";
   for (let v of values.value) {
     let destination = props.increase ? 4 : 1;
 
     let slider: Slide[];
     if (props.horizontal) {
       // Get the current row
-      slider = _slides.filter(slide => slide.position.y === v)
+      slider = _slides.filter((slide) => slide.position.y === v);
     } else {
       // Get the current column
-      slider = _slides.filter(slide => slide.position.x === v)
+      slider = _slides.filter((slide) => slide.position.x === v);
     }
 
     // Sort the slider
-    let sorter = props.increase ?
-      (l: Slide,r: Slide)=> l.position[sliderDim] < r.position[sliderDim] ? 1 : -1
-    : (l: Slide,r: Slide)=> l.position[sliderDim] > r.position[sliderDim] ? 1 : -1;
+    let sorter = props.increase
+      ? (l: Slide, r: Slide) =>
+          l.position[sliderDim] < r.position[sliderDim] ? 1 : -1
+      : (l: Slide, r: Slide) =>
+          l.position[sliderDim] > r.position[sliderDim] ? 1 : -1;
     slider.sort(sorter);
 
     for (let i = 0; i < slider.length && slider[i]; ++i) {
@@ -132,17 +134,17 @@ function slide(props: { horizontal: boolean, increase: boolean })
         moved = true;
         slider[i].position[sliderDim] = destination;
       }
-      if (slider[i+1] && slider[i+1].value === slider[i].value) {
+      if (slider[i + 1] && slider[i + 1].value === slider[i].value) {
         merged = true;
-        slider[i].value = slider[i+1].value *= 2;
-        slider[i+1].merged = slider[i].id;
+        slider[i].value = slider[i + 1].value *= 2;
+        slider[i + 1].merged = slider[i].id;
         score.value = score.value + slider[i].value;
         slider[++i].position[sliderDim] = destination;
       }
       destination = destination + (props.increase ? -1 : 1);
     }
   }
-  return {moved, merged};
+  return { moved, merged };
 }
 
 function availablePositions(): Position[] {
@@ -150,9 +152,12 @@ function availablePositions(): Position[] {
 
   for (let x of values.value) {
     for (let y of values.value) {
-      if (!slides.value.find((slide: Slide) =>
-        slide.position.x === x && slide.position.y === y))
-        positions.push({x,y} as Position);
+      if (
+        !slides.value.find(
+          (slide: Slide) => slide.position.x === x && slide.position.y === y
+        )
+      )
+        positions.push({ x, y } as Position);
     }
   }
 
@@ -167,33 +172,41 @@ function availablePositions(): Position[] {
       <div class="header-right">
         <div class="score">
           <span class="title">score</span>
-          <span class="value">{{score}}</span>
+          <span class="value">{{ score }}</span>
         </div>
         <div class="controlls">
           <button @click="startNewGame" class="new-game">New Game</button>
-          <button @click="toggleEasyMode"
-                  :class="['easy-mode', {active: easyMode}]"
-                  >Easy Mode</button>
+          <button
+            @click="toggleEasyMode"
+            :class="['easy-mode', { active: easyMode }]"
+          >
+            Easy Mode
+          </button>
         </div>
       </div>
     </div>
     <div class="board">
       <div class="slots">
-        <div class="slot" v-for="cell in new Array(16)"></div>
+        <div class="slot" v-for="(val, i) in new Array(16)" :key="i"></div>
       </div>
       <div class="slides">
         <transition-group name="expand">
-          <div v-for="slide in slides"
-               :class="['slide',
-                       slide.value > 2048 ? 'big' : '_'+slide.value,
-                       {merged: slide.merged},
-                       'x'+slide.position.x,
-                       'y'+slide.position.y]"
-               :key="slide.id"
-               >{{slide.value}}</div>
-      </transition-group>
+          <div
+            v-for="slide in slides"
+            :class="[
+              'slide',
+              slide.value > 2048 ? 'big' : '_' + slide.value,
+              { merged: slide.merged },
+              'x' + slide.position.x,
+              'y' + slide.position.y,
+            ]"
+            :key="slide.id"
+          >
+            {{ slide.value }}
+          </div>
+        </transition-group>
+      </div>
     </div>
-  </div>
   </section>
 </template>
 
@@ -207,7 +220,7 @@ body {
 <style lang="scss" scoped>
 $gap: 13px;
 $boardDim: min(80vw, 80vh);
-$slotDim: calc((#{$boardDim} - 5*#{$gap})/4);
+$slotDim: calc((#{$boardDim} - 5 *#{$gap}) / 4);
 $background-color: #faf8ef;
 $board-color: #cdc1b4;
 $gap-color: #bbada0;
@@ -287,7 +300,8 @@ $gap-color: #bbada0;
     border-radius: 8px;
     background-color: $gap-color;
 
-    .slots, .slides {
+    .slots,
+    .slides {
       display: grid;
       grid-gap: $gap;
       grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -299,7 +313,7 @@ $gap-color: #bbada0;
       }
 
       .slot {
-        background-color:$board-color;
+        background-color: $board-color;
       }
     }
 
@@ -315,9 +329,8 @@ $gap-color: #bbada0;
   }
 }
 
-
 .slide {
-  transition: .5s;
+  transition: 0.5s;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -327,7 +340,9 @@ $gap-color: #bbada0;
   height: $slotDim;
   font-size: calc(#{$slotDim} / 2.5);
 
-  &.merged{ z-index: -1 }
+  &.merged {
+    z-index: -1;
+  }
 
   &.expand-enter-active {
     width: 0;
@@ -412,35 +427,35 @@ $gap-color: #bbada0;
     color: #f9f6f2;
     background: #edd073;
     box-shadow: 0 0 30px 10px rgb(243 215 116 / 24%),
-                inset 0 0 0 1px rgb(255 255 255 / 14%);
+      inset 0 0 0 1px rgb(255 255 255 / 14%);
     font-size: calc(#{$slotDim} / 3);
   }
   &._256 {
     color: #f9f6f2;
     background: #edcc62;
     box-shadow: 0 0 30px 10px rgb(243 215 116 / 32%),
-                inset 0 0 0 1px rgb(255 255 255 / 19%);
+      inset 0 0 0 1px rgb(255 255 255 / 19%);
     font-size: calc(#{$slotDim} / 3);
   }
   &._512 {
     color: #f9f6f2;
     background: #edc950;
     box-shadow: 0 0 30px 10px rgb(243 215 116 / 40%),
-                inset 0 0 0 1px rgb(255 255 255 / 24%);
+      inset 0 0 0 1px rgb(255 255 255 / 24%);
     font-size: calc(#{$slotDim} / 3);
   }
   &._1024 {
     color: #f9f6f2;
     background: #edc53f;
     box-shadow: 0 0 30px 10px rgb(243 215 116 / 48%),
-                inset 0 0 0 1px rgb(255 255 255 / 29%);
+      inset 0 0 0 1px rgb(255 255 255 / 29%);
     font-size: calc(#{$slotDim} / 3.5);
   }
   &._2048 {
     color: #f9f6f2;
     background: #edc22e;
     box-shadow: 0 0 30px 10px rgb(243 215 116 / 56%),
-                inset 0 0 0 1px rgb(255 255 255 / 33%);
+      inset 0 0 0 1px rgb(255 255 255 / 33%);
     font-size: 35px;
     font-size: calc(#{$slotDim} / 3.5);
   }
